@@ -11,7 +11,22 @@ import 'package:what_is_my_work/game/bloc/game_bloc.dart';
 import 'models.dart';
 import 'package:what_is_my_work/settings_screen.dart';
 
-class WhatIsMyWorkGame extends FlameGame with HasGameRef {
+Future<void> _launchUrl(String? urlString, BuildContext context) async {
+  if (urlString != null && urlString.isNotEmpty) {
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      // ignore: use_build_context_synchronously
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not launch $urlString')),
+      );
+    }
+  }
+}
+
+class WhatIsMyWorkGame extends FlameGame with HasGameReference {
   final List<Level> levels;
   int currentLevel = 0;
   int currentStage = 0;
@@ -22,6 +37,28 @@ class WhatIsMyWorkGame extends FlameGame with HasGameRef {
   bool isUiOverlayActive = false;
 
   WhatIsMyWorkGame({required this.levels});
+
+  int get totalSpentTime {
+    int total = 0;
+    for (var level in levels) {
+      for (var stage in level.stages) {
+        for (var task in stage.tasks) {
+          if (task.isCompleted) {
+            total += task.durationSeconds;
+          }
+        }
+      }
+    }
+    return total;
+  }
+
+  void cancelTask(BuildContext context) {
+    isTaskActive = false;
+    isUiOverlayActive = false;
+    context.read<GameBloc>().add(GameTaskCancelled());
+    overlays.remove('TaskTimer');
+    overlays.add('GameStatus');
+  }
 
   @override
   Future<void> onLoad() async {
@@ -194,8 +231,12 @@ class GameStatusOverlay extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Uzmanlık: \t	${currentLevel.type.name.toUpperCase()}',
+                        'Uzmanlık: \t\t${currentLevel.type.name.toUpperCase()}',
                         style: const TextStyle(fontSize: 18, color: Colors.yellow, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Toplam Süre: ${game.totalSpentTime}s',
+                        style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                       IconButton(
                         icon: const Icon(Icons.settings, color: Colors.white),
@@ -268,6 +309,16 @@ class GameStatusOverlay extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
+                                    if (game.levels[l].stages[s].tasks[t].taskUrl != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.work, color: Colors.blue, size: 18),
+                                        onPressed: () => _launchUrl(game.levels[l].stages[s].tasks[t].taskUrl, context),
+                                      ),
+                                    if (game.levels[l].stages[s].tasks[t].explanationUrl != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.help_outline, color: Colors.yellow, size: 18),
+                                        onPressed: () => _launchUrl(game.levels[l].stages[s].tasks[t].explanationUrl, context),
+                                      ),
                                     if (!game.levels[l].stages[s].tasks[t].isCompleted)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 8.0),
@@ -348,25 +399,10 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
     // completeTask now handles removing the timer overlay and advancing state
   }
 
-  Future<void> _launchDocumentation() async {
-    final urlString = widget.game.getCurrentTask().documentationUrl;
-    if (urlString != null && urlString.isNotEmpty) {
-      final url = Uri.parse(urlString);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        // ignore: use_build_context_synchronously
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $urlString')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     widget.game.isUiOverlayActive = true; // Mark UI as active
+    final currentTask = widget.game.getCurrentTask();
     return Center(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -374,7 +410,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
           color: Colors.black.withOpacity(0.7),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedSwitcher(
@@ -389,11 +425,6 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (widget.game.getCurrentTask().documentationUrl != null)
-                          IconButton(
-                            icon: const Icon(Icons.link, color: Colors.blue),
-                            onPressed: _launchDocumentation,
-                          ),
                         const Text(
                           'Görev Zamanlayıcı',
                           style: TextStyle(color: Colors.white, fontSize: 24),
@@ -416,6 +447,32 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                       child: const Text('Görevi Bitir'),
                     ),
             ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (currentTask.taskUrl != null)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.work),
+                    label: const Text('Görev Linki'),
+                    onPressed: () => _launchUrl(currentTask.taskUrl, context),
+                  ),
+                const SizedBox(width: 10),
+                if (currentTask.explanationUrl != null)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.help_outline),
+                    label: const Text('Yardım'),
+                    onPressed: () => _launchUrl(currentTask.explanationUrl, context),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if ((_remaining ?? 1) > 0)
+              ElevatedButton(
+                onPressed: () => widget.game.cancelTask(context),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('İptal'),
+              )
           ],
         ),
       ),
@@ -458,12 +515,25 @@ class TaskDetailsOverlay extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  game.overlays.remove('TaskDetails');
-                  game.startTask();
-                },
-                child: const Text('Başlamak için tıkla'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      game.overlays.remove('TaskDetails');
+                      game.overlays.add('GameStatus');
+                    },
+                    child: const Text('Geri', style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      game.overlays.remove('TaskDetails');
+                      game.startTask();
+                    },
+                    child: const Text('Başlamak için tıkla'),
+                  ),
+                ],
               ),
             ],
           ),

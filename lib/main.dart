@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:what_is_my_work/game/bloc/game_bloc.dart';
 import 'package:what_is_my_work/game/game.dart';
-import 'package:what_is_my_work/game/levels.dart';
 
 void main() {
   runApp(
     BlocProvider(
-      create: (context) => GameBloc()..add(UpdateSettings(buildLevels())),
+      create: (context) => GameBloc()..add(GameStarted()),
       child: MaterialApp(
         home: BlocBuilder<GameBloc, GameState>(
           builder: (context, state) {

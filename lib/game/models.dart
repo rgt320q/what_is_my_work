@@ -4,7 +4,8 @@ class Task {
   final String name;
   final String description;
   int durationSeconds;
-  String? documentationUrl;
+  String? taskUrl;
+  String? explanationUrl;
   bool isCompleted;
   DateTime? startTime;
   DateTime? endTime;
@@ -13,7 +14,8 @@ class Task {
     required this.name,
     required this.description,
     required this.durationSeconds,
-    this.documentationUrl,
+    this.taskUrl,
+    this.explanationUrl,
     this.isCompleted = false,
     this.startTime,
     this.endTime,
@@ -23,7 +25,8 @@ class Task {
     String? name,
     String? description,
     int? durationSeconds,
-    String? documentationUrl,
+    String? taskUrl,
+    String? explanationUrl,
     bool? isCompleted,
     DateTime? startTime,
     DateTime? endTime,
@@ -32,7 +35,8 @@ class Task {
       name: name ?? this.name,
       description: description ?? this.description,
       durationSeconds: durationSeconds ?? this.durationSeconds,
-      documentationUrl: documentationUrl ?? this.documentationUrl,
+      taskUrl: taskUrl ?? this.taskUrl,
+      explanationUrl: explanationUrl ?? this.explanationUrl,
       isCompleted: isCompleted ?? this.isCompleted,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,

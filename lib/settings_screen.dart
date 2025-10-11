@@ -13,7 +13,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late List<Level> _levels;
   final Map<Task, TextEditingController> _durationControllers = {};
-  final Map<Task, TextEditingController> _urlControllers = {};
+  final Map<Task, TextEditingController> _taskUrlControllers = {};
+  final Map<Task, TextEditingController> _explanationUrlControllers = {};
 
   @override
   void initState() {
@@ -39,8 +40,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         for (var task in stage.tasks) {
           _durationControllers[task] =
               TextEditingController(text: task.durationSeconds.toString());
-          _urlControllers[task] =
-              TextEditingController(text: task.documentationUrl ?? '');
+          _taskUrlControllers[task] = TextEditingController(text: task.taskUrl ?? '');
+          _explanationUrlControllers[task] =
+              TextEditingController(text: task.explanationUrl ?? '');
         }
       }
     }
@@ -51,7 +53,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     for (var controller in _durationControllers.values) {
       controller.dispose();
     }
-    for (var controller in _urlControllers.values) {
+    for (var controller in _taskUrlControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _explanationUrlControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -65,10 +70,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             final newDuration =
                 int.tryParse(_durationControllers[task]!.text) ??
                     task.durationSeconds;
-            final newUrl = _urlControllers[task]!.text;
+            final newtaskUrl = _taskUrlControllers[task]!.text;
+            final newexplanationUrl = _explanationUrlControllers[task]!.text;
 
             task.durationSeconds = newDuration;
-            task.documentationUrl = newUrl.isNotEmpty ? newUrl : null;
+            task.taskUrl = newtaskUrl.isNotEmpty ? newtaskUrl : null;
+            task.explanationUrl = newexplanationUrl.isNotEmpty ? newexplanationUrl : null;
           }
         }
       }
@@ -132,9 +139,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: 8),
                           TextFormField(
-                            controller: _urlControllers[task],
+                            controller: _taskUrlControllers[task],
                             decoration: const InputDecoration(
-                              labelText: 'Doküman URL',
+                              labelText: 'Görev URL',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _explanationUrlControllers[task],
+                            decoration: const InputDecoration(
+                              labelText: 'Açıklama URL',
                               border: OutlineInputBorder(),
                             ),
                           ),
