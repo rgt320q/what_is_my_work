@@ -11,3 +11,13 @@ class UpdateSettings extends GameEvent {
 }
 
 class GameTaskCancelled extends GameEvent {}
+
+class GameStateSaved extends GameEvent {}
+
+class LoginRequested extends GameEvent {
+  final String username;
+
+  LoginRequested(this.username);
+}
+
+

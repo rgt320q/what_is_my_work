@@ -21,7 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     final gameBloc = context.read<GameBloc>();
     if (gameBloc.state is GameLoaded) {
-      _levels = List<Level>.from((gameBloc.state as GameLoaded).levels.map(
+      _levels = List<Level>.from((gameBloc.state as GameLoaded).profile.levels.map(
             (level) => level.copyWith(
               stages: List<Stage>.from(level.stages.map(
                     (stage) => stage.copyWith(

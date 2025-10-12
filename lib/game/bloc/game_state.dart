@@ -5,7 +5,7 @@ abstract class GameState {}
 class GameInitial extends GameState {}
 
 class GameLoaded extends GameState {
-  final List<Level> levels;
+  final UserProfile profile;
 
-  GameLoaded(this.levels);
+  GameLoaded(this.profile);
 }

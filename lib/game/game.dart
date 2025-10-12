@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
@@ -19,9 +20,9 @@ Future<void> _launchUrl(String? urlString, BuildContext context) async {
     } else {
       // ignore: use_build_context_synchronously
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch $urlString')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not launch $urlString')));
     }
   }
 }
@@ -33,6 +34,8 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
   int currentTask = 0;
   TimerComponent? timerComponent;
   bool isTaskActive = false;
+  Map<int, int> userAnswers = {};
+  List<Question> failedQuestionsQuiz = [];
 
   bool isUiOverlayActive = false;
 
@@ -81,6 +84,75 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     return levels[currentLevel].stages[currentStage].tasks[currentTask];
   }
 
+  Quiz? getCurrentQuiz() {
+    if (failedQuestionsQuiz.isNotEmpty) {
+      return Quiz(
+        levelType: levels[currentLevel].type,
+        stageNumber: levels[currentLevel].stages[currentStage].stageNumber,
+        questions: failedQuestionsQuiz,
+      );
+    }
+
+    final stage = levels[currentLevel].stages[currentStage];
+    final random = Random();
+    List<Question> quizQuestions = [];
+
+    for (var task in stage.tasks) {
+      if (task.questions.isNotEmpty) {
+        final randomIndex = random.nextInt(task.questions.length);
+        quizQuestions.add(task.questions[randomIndex]);
+      }
+    }
+
+    if (quizQuestions.isNotEmpty) {
+      return Quiz(
+        levelType: levels[currentLevel].type,
+        stageNumber: stage.stageNumber,
+        questions: quizQuestions,
+      );
+    }
+
+    return null;
+  }
+
+  void jumpToTask(String taskName) {
+    for (int l = 0; l < levels.length; l++) {
+      for (int s = 0; s < levels[l].stages.length; s++) {
+        for (int t = 0; t < levels[l].stages[s].tasks.length; t++) {
+          if (levels[l].stages[s].tasks[t].name == taskName) {
+            currentLevel = l;
+            currentStage = s;
+            currentTask = t;
+            children.whereType<TaskComponent>().forEach(remove);
+            add(_buildTaskComponent());
+            overlays.clear();
+            overlays.add('GameStatus');
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  void findAndSetNextIncompleteTask() {
+    for (int l = 0; l < levels.length; l++) {
+      for (int s = 0; s < levels[l].stages.length; s++) {
+        for (int t = 0; t < levels[l].stages[s].tasks.length; t++) {
+          if (!levels[l].stages[s].tasks[t].isCompleted) {
+            currentLevel = l;
+            currentStage = s;
+            currentTask = t;
+            children.whereType<TaskComponent>().forEach(remove);
+            add(_buildTaskComponent());
+            overlays.clear();
+            overlays.add('GameStatus');
+            return;
+          }
+        }
+      }
+    }
+  }
+
   void startTask() {
     if (isTaskActive) return;
     isTaskActive = true;
@@ -110,11 +182,8 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     advanceTask();
   }
 
-  void advanceTask() {
-    final stage = levels[currentLevel].stages[currentStage];
-    if (currentTask < stage.tasks.length - 1) {
-      currentTask++;
-    } else if (currentStage < levels[currentLevel].stages.length - 1) {
+  void advanceToNextStage() {
+    if (currentStage < levels[currentLevel].stages.length - 1) {
       currentStage++;
       currentTask = 0;
     } else if (currentLevel < levels.length - 1) {
@@ -133,6 +202,48 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     // After advancing, show the main status screen again
     overlays.add('GameStatus');
     isUiOverlayActive = true;
+  }
+
+  void advanceTask() {
+    final stage = levels[currentLevel].stages[currentStage];
+
+    if (failedQuestionsQuiz.isNotEmpty) {
+      bool allFailedTasksDone = failedQuestionsQuiz.every((q) {
+        for (var level in levels) {
+          for (var stage in level.stages) {
+            for (var task in stage.tasks) {
+              if (task.name == q.relatedTaskName) {
+                return task.isCompleted;
+              }
+            }
+          }
+        }
+        return false;
+      });
+
+      if (allFailedTasksDone) {
+        userAnswers.clear();
+        overlays.add('Quiz');
+      } else {
+        findAndSetNextIncompleteTask();
+      }
+    } else {
+      if (currentTask < stage.tasks.length - 1) {
+        currentTask++;
+        children.whereType<TaskComponent>().forEach(remove);
+        add(_buildTaskComponent());
+        overlays.add('GameStatus');
+      } else {
+        final quiz = getCurrentQuiz();
+        if (quiz != null) {
+          failedQuestionsQuiz = quiz.questions;
+          userAnswers.clear();
+          overlays.add('Quiz');
+        } else {
+          advanceToNextStage();
+        }
+      }
+    }
   }
 }
 
@@ -175,7 +286,8 @@ class TaskComponent extends PositionComponent with TapCallbacks {
       return;
     }
     super.render(canvas);
-    final paint = Paint()..color = isActive ? const Color(0xFFB3E5FC) : const Color(0xFFE0E0E0);
+    final paint = Paint()
+      ..color = isActive ? const Color(0xFFB3E5FC) : const Color(0xFFE0E0E0);
     canvas.drawRect(size.toRect(), paint);
     final textStyle = const TextStyle(fontSize: 18, color: Color(0xFF212121));
     final tpName = TextPainter(
@@ -219,7 +331,9 @@ class GameStatusOverlay extends StatelessWidget {
           final currentLevel = game.levels[game.currentLevel];
           final currentStage = game.currentStage;
           final currentTask = game.currentTask;
-          final currentTaskObj = currentLevel.stages[currentStage].tasks[currentTask];
+          final currentTaskObj =
+              currentLevel.stages[currentStage].tasks[currentTask];
+          final currentStageObj = currentLevel.stages[currentStage];
           return SafeArea(
             child: Container(
               color: Colors.black.withOpacity(0.7),
@@ -231,12 +345,20 @@ class GameStatusOverlay extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Uzmanlık: \t\t${currentLevel.type.name.toUpperCase()}',
-                        style: const TextStyle(fontSize: 18, color: Colors.yellow, fontWeight: FontWeight.bold),
+                        'Uzmanlık: ${currentLevel.type.name.toUpperCase()} (Kademe ${currentStageObj.stageNumber})',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.yellow,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         'Toplam Süre: ${game.totalSpentTime}s',
-                        style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.settings, color: Colors.white),
@@ -261,39 +383,73 @@ class GameStatusOverlay extends StatelessWidget {
                               'Seviye: ${game.levels[l].type.name.toUpperCase()}',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: l == game.currentLevel ? Colors.greenAccent : Colors.white,
+                                color: l == game.currentLevel
+                                    ? Colors.greenAccent
+                                    : Colors.white,
                                 fontSize: 16,
                               ),
                             ),
                           ),
-                          for (int s = 0; s < game.levels[l].stages.length; s++) ...[
+                          for (
+                            int s = 0;
+                            s < game.levels[l].stages.length;
+                            s++
+                          ) ...[
                             Padding(
-                              padding: const EdgeInsets.only(left: 12.0, top: 2.0, bottom: 2.0),
+                              padding: const EdgeInsets.only(
+                                left: 12.0,
+                                top: 2.0,
+                                bottom: 2.0,
+                              ),
                               child: Text(
                                 'Kademe ${game.levels[l].stages[s].stageNumber}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
-                                  color: (l == game.currentLevel && s == currentStage) ? Colors.lightBlueAccent : Colors.white70,
+                                  color:
+                                      (l == game.currentLevel &&
+                                          s == currentStage)
+                                      ? Colors.lightBlueAccent
+                                      : Colors.white70,
                                 ),
                               ),
                             ),
-                            for (int t = 0; t < game.levels[l].stages[s].tasks.length; t++) ...[
+                            for (
+                              int t = 0;
+                              t < game.levels[l].stages[s].tasks.length;
+                              t++
+                            ) ...[
                               Padding(
-                                padding: const EdgeInsets.only(left: 28.0, bottom: 2),
+                                padding: const EdgeInsets.only(
+                                  left: 28.0,
+                                  bottom: 2,
+                                ),
                                 child: Row(
                                   children: [
                                     Icon(
-                                      game.levels[l].stages[s].tasks[t].isCompleted
+                                      game
+                                              .levels[l]
+                                              .stages[s]
+                                              .tasks[t]
+                                              .isCompleted
                                           ? Icons.check_circle
-                                          : (l == game.currentLevel && s == currentStage && t == currentTask)
-                                              ? Icons.play_circle_fill
-                                              : Icons.radio_button_unchecked,
-                                      color: game.levels[l].stages[s].tasks[t].isCompleted
+                                          : (l == game.currentLevel &&
+                                                s == currentStage &&
+                                                t == currentTask)
+                                          ? Icons.play_circle_fill
+                                          : Icons.radio_button_unchecked,
+                                      color:
+                                          game
+                                              .levels[l]
+                                              .stages[s]
+                                              .tasks[t]
+                                              .isCompleted
                                           ? Colors.green
-                                          : (l == game.currentLevel && s == currentStage && t == currentTask)
-                                              ? Colors.orange
-                                              : Colors.grey,
+                                          : (l == game.currentLevel &&
+                                                s == currentStage &&
+                                                t == currentTask)
+                                          ? Colors.orange
+                                          : Colors.grey,
                                       size: 16,
                                     ),
                                     const SizedBox(width: 8),
@@ -302,29 +458,75 @@ class GameStatusOverlay extends StatelessWidget {
                                         game.levels[l].stages[s].tasks[t].name,
                                         style: TextStyle(
                                           fontSize: 14,
-                                          color: game.levels[l].stages[s].tasks[t].isCompleted
+                                          color:
+                                              game
+                                                  .levels[l]
+                                                  .stages[s]
+                                                  .tasks[t]
+                                                  .isCompleted
                                               ? Colors.greenAccent
                                               : Colors.white,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    if (game.levels[l].stages[s].tasks[t].taskUrl != null)
+                                    if (game
+                                            .levels[l]
+                                            .stages[s]
+                                            .tasks[t]
+                                            .taskUrl !=
+                                        null)
                                       IconButton(
-                                        icon: const Icon(Icons.work, color: Colors.blue, size: 18),
-                                        onPressed: () => _launchUrl(game.levels[l].stages[s].tasks[t].taskUrl, context),
+                                        icon: const Icon(
+                                          Icons.work,
+                                          color: Colors.blue,
+                                          size: 18,
+                                        ),
+                                        onPressed: () => _launchUrl(
+                                          game
+                                              .levels[l]
+                                              .stages[s]
+                                              .tasks[t]
+                                              .taskUrl,
+                                          context,
+                                        ),
                                       ),
-                                    if (game.levels[l].stages[s].tasks[t].explanationUrl != null)
+                                    if (game
+                                            .levels[l]
+                                            .stages[s]
+                                            .tasks[t]
+                                            .explanationUrl !=
+                                        null)
                                       IconButton(
-                                        icon: const Icon(Icons.help_outline, color: Colors.yellow, size: 18),
-                                        onPressed: () => _launchUrl(game.levels[l].stages[s].tasks[t].explanationUrl, context),
+                                        icon: const Icon(
+                                          Icons.help_outline,
+                                          color: Colors.yellow,
+                                          size: 18,
+                                        ),
+                                        onPressed: () => _launchUrl(
+                                          game
+                                              .levels[l]
+                                              .stages[s]
+                                              .tasks[t]
+                                              .explanationUrl,
+                                          context,
+                                        ),
                                       ),
-                                    if (!game.levels[l].stages[s].tasks[t].isCompleted)
+                                    if (!game
+                                        .levels[l]
+                                        .stages[s]
+                                        .tasks[t]
+                                        .isCompleted)
                                       Padding(
-                                        padding: const EdgeInsets.only(left: 8.0),
+                                        padding: const EdgeInsets.only(
+                                          left: 8.0,
+                                        ),
                                         child: Text(
                                           '${game.levels[l].stages[s].tasks[t].durationSeconds}s',
-                                          style: const TextStyle(color: Colors.yellow, fontSize: 12),
+                                          style: const TextStyle(
+                                            color: Colors.yellow,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
                                   ],
@@ -416,10 +618,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
+                return FadeTransition(opacity: animation, child: child);
               },
               child: (_remaining ?? 1) > 0
                   ? Row(
@@ -433,7 +632,11 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                         Text(
                           _remaining.toString(),
                           key: ValueKey('timer_$_remaining'),
-                          style: const TextStyle(color: Colors.yellow, fontSize: 28, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.yellow,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const Text(
                           ' sn',
@@ -462,7 +665,8 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                   ElevatedButton.icon(
                     icon: const Icon(Icons.help_outline),
                     label: const Text('Yardım'),
-                    onPressed: () => _launchUrl(currentTask.explanationUrl, context),
+                    onPressed: () =>
+                        _launchUrl(currentTask.explanationUrl, context),
                   ),
               ],
             ),
@@ -472,7 +676,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                 onPressed: () => widget.game.cancelTask(context),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 child: const Text('İptal'),
-              )
+              ),
           ],
         ),
       ),
@@ -509,10 +713,7 @@ class TaskDetailsOverlay extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Süre: ${currentTask.durationSeconds} saniye',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
-                ),
+                style: const TextStyle(fontSize: 18, color: Colors.white70),
               ),
               const SizedBox(height: 24),
               Row(
@@ -523,7 +724,10 @@ class TaskDetailsOverlay extends StatelessWidget {
                       game.overlays.remove('TaskDetails');
                       game.overlays.add('GameStatus');
                     },
-                    child: const Text('Geri', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'Geri',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                   const SizedBox(width: 20),
                   ElevatedButton(
