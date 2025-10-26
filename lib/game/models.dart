@@ -55,9 +55,13 @@ class Task {
       taskUrl: json['taskUrl'],
       explanationUrl: json['explanationUrl'],
       isCompleted: json['isCompleted'],
-      startTime: json['startTime'] != null ? DateTime.parse(json['startTime']) : null,
+      startTime: json['startTime'] != null
+          ? DateTime.parse(json['startTime'])
+          : null,
       endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
-      questions: (json['questions'] as List).map((e) => Question.fromJson(e)).toList(),
+      questions: (json['questions'] as List)
+          .map((e) => Question.fromJson(e))
+          .toList(),
     );
   }
 
@@ -87,11 +91,7 @@ class Stage {
     this.isCompleted = false,
   });
 
-  Stage copyWith({
-    int? stageNumber,
-    List<Task>? tasks,
-    bool? isCompleted,
-  }) {
+  Stage copyWith({int? stageNumber, List<Task>? tasks, bool? isCompleted}) {
     return Stage(
       stageNumber: stageNumber ?? this.stageNumber,
       tasks: tasks ?? this.tasks,
@@ -121,17 +121,9 @@ class Level {
   final List<Stage> stages;
   bool isCompleted;
 
-  Level({
-    required this.type,
-    required this.stages,
-    this.isCompleted = false,
-  });
+  Level({required this.type, required this.stages, this.isCompleted = false});
 
-  Level copyWith({
-    LevelType? type,
-    List<Stage>? stages,
-    bool? isCompleted,
-  }) {
+  Level copyWith({LevelType? type, List<Stage>? stages, bool? isCompleted}) {
     return Level(
       type: type ?? this.type,
       stages: stages ?? this.stages,

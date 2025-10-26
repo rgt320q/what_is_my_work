@@ -10,9 +10,7 @@ void main() {
   runApp(
     BlocProvider(
       create: (context) => GameBloc(),
-      child: const MaterialApp(
-        home: AppNavigator(),
-      ),
+      child: const MaterialApp(home: AppNavigator()),
     ),
   );
 }
@@ -64,29 +62,41 @@ class _GameHostState extends State<GameHost> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GameBloc, GameState>(
+      // This builder ensures that we only try to build the game screen
+      // when the user profile and game data are fully loaded.
       builder: (context, state) {
         if (state is GameLoaded) {
-          return GameWidget.controlled(
-            gameFactory: () => WhatIsMyWorkGame(levels: state.profile.levels),
-            overlayBuilderMap: {
-              'TaskTimer': (context, game) =>
-                  TaskTimerWidget(game: game as WhatIsMyWorkGame),
-              'GameStatus': (context, game) =>
-                  GameStatusOverlay(game: game as WhatIsMyWorkGame),
-              'TaskDetails': (context, game) =>
-                  TaskDetailsOverlay(game as WhatIsMyWorkGame),
-              'Quiz': (context, game) =>
-                  QuizOverlay(game: game as WhatIsMyWorkGame, quiz: game.getCurrentQuiz()!),
-              'QuizResult': (context, game) =>
-                  QuizResultOverlay(game: game as WhatIsMyWorkGame, quiz: game.getCurrentQuiz()!, userAnswers: game.userAnswers),
-            },
-            initialActiveOverlays: const ['GameStatus'],
+          return Scaffold(
+            body: Stack(
+              children: [
+                GameWidget.controlled(
+                  gameFactory: () =>
+                      WhatIsMyWorkGame(levels: state.profile.levels),
+                  overlayBuilderMap: {
+                    'TaskTimer': (context, game) =>
+                        TaskTimerWidget(game: game as WhatIsMyWorkGame),
+                    'GameStatus': (context, game) =>
+                        GameStatusOverlay(game: game as WhatIsMyWorkGame),
+                    'TaskDetails': (context, game) =>
+                        TaskDetailsOverlay(game as WhatIsMyWorkGame),
+                    'Quiz': (context, game) => QuizOverlay(
+                      game: game as WhatIsMyWorkGame,
+                      quiz: game.getCurrentQuiz()!,
+                    ),
+                    'QuizResult': (context, game) => QuizResultOverlay(
+                      game: game as WhatIsMyWorkGame,
+                      quiz: game.getCurrentQuiz()!,
+                      userAnswers: game.userAnswers,
+                    ),
+                  },
+                  initialActiveOverlays: const ['GameStatus'],
+                ),
+              ],
+            ),
           );
         } else {
           // This should not be reached if the navigator is working correctly
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
       },
     );

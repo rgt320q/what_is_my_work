@@ -20,4 +20,8 @@ class LoginRequested extends GameEvent {
   LoginRequested(this.username);
 }
 
+class UserProfileUpdated extends GameEvent {
+  final UserProfile updatedProfile;
 
+  UserProfileUpdated(this.updatedProfile);
+}

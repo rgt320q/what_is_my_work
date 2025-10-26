@@ -6,6 +6,7 @@ class GameInitial extends GameState {}
 
 class GameLoaded extends GameState {
   final UserProfile profile;
+  final User user;
 
-  GameLoaded(this.profile);
+  GameLoaded(this.profile, this.user);
 }

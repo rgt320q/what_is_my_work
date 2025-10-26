@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:what_is_my_work/game/models.dart';
@@ -22,7 +23,7 @@ class GameStateRepository {
         return UserProfile.fromJson(decodedMap);
       } catch (e) {
         // If decoding fails, return null to start a fresh game.
-        print('Error decoding saved state for user $username: $e');
+        developer.log('Error decoding saved state for user $username: $e');
         return null;
       }
     }

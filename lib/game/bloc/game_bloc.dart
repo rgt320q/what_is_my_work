@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:what_is_my_work/game/game_state_repository.dart';
 import 'package:what_is_my_work/game/levels.dart';
 import 'package:what_is_my_work/game/models.dart';
+import 'package:what_is_my_work/models/user.dart';
 
 part 'game_event.dart';
 part 'game_state.dart';
@@ -9,28 +10,43 @@ part 'game_state.dart';
 class GameBloc extends Bloc<GameEvent, GameState> {
   final GameStateRepository _repository;
 
-  GameBloc({GameStateRepository? repository}) 
-      : _repository = repository ?? GameStateRepository(),
-        super(GameInitial()) {
-
+  GameBloc({GameStateRepository? repository})
+    : _repository = repository ?? GameStateRepository(),
+      super(GameInitial()) {
     on<LoginRequested>((event, emit) async {
-      final savedProfile = await _repository.loadProfile(username: event.username);
+      final savedProfile = await _repository.loadProfile(
+        username: event.username,
+      );
       if (savedProfile != null) {
-        emit(GameLoaded(savedProfile));
+        emit(
+          GameLoaded(
+            savedProfile,
+            User(username: event.username, loginTime: DateTime.now()),
+          ),
+        );
       } else {
         final newProfile = UserProfile(
           username: event.username,
           levels: buildLevels(),
         );
-        emit(GameLoaded(newProfile));
+        emit(
+          GameLoaded(
+            newProfile,
+            User(username: event.username, loginTime: DateTime.now()),
+          ),
+        );
       }
     });
 
     on<UpdateSettings>((event, emit) {
       if (state is GameLoaded) {
-        final currentProfile = (state as GameLoaded).profile;
-        final newProfile = UserProfile(username: currentProfile.username, levels: event.levels);
-        emit(GameLoaded(newProfile));
+        final currentState = (state as GameLoaded);
+        final currentProfile = currentState.profile;
+        final newProfile = UserProfile(
+          username: currentProfile.username,
+          levels: event.levels,
+        );
+        emit(GameLoaded(newProfile, currentState.user));
       }
     });
 
@@ -42,13 +58,22 @@ class GameBloc extends Bloc<GameEvent, GameState> {
 
     on<GameTaskCancelled>((event, emit) {
       if (state is GameLoaded) {
-        final profile = (state as GameLoaded).profile;
+        final currentState = (state as GameLoaded);
+        final profile = currentState.profile;
         // Create a deep copy to ensure we're not mutating the original state directly
-        final newLevels = profile.levels.map((l) => l.copyWith(
-          stages: l.stages.map((s) => s.copyWith(
-            tasks: s.tasks.map((t) => t.copyWith()).toList(),
-          )).toList(),
-        )).toList();
+        final newLevels = profile.levels
+            .map(
+              (l) => l.copyWith(
+                stages: l.stages
+                    .map(
+                      (s) => s.copyWith(
+                        tasks: s.tasks.map((t) => t.copyWith()).toList(),
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
+            .toList();
 
         for (var level in newLevels) {
           for (var stage in level.stages) {
@@ -59,7 +84,12 @@ class GameBloc extends Bloc<GameEvent, GameState> {
             }
           }
         }
-        emit(GameLoaded(UserProfile(username: profile.username, levels: newLevels)));
+        emit(
+          GameLoaded(
+            UserProfile(username: profile.username, levels: newLevels),
+            currentState.user,
+          ),
+        );
       }
     });
   }
