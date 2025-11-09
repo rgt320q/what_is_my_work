@@ -20,8 +20,33 @@ class LoginRequested extends GameEvent {
   LoginRequested(this.username);
 }
 
-class UserProfileUpdated extends GameEvent {
-  final UserProfile updatedProfile;
+class GamePauseRequested extends GameEvent {}
 
-  UserProfileUpdated(this.updatedProfile);
+class GameResumeRequested extends GameEvent {}
+
+// Test/Debug Events
+class ResetProgressRequested extends GameEvent {}
+
+class SetProgressRequested extends GameEvent {
+  final int levelIndex;
+  final int stageIndex;
+  final int taskIndex;
+
+  SetProgressRequested({
+    required this.levelIndex,
+    required this.stageIndex,
+    required this.taskIndex,
+  });
+}
+
+class CompleteTasksUpToRequested extends GameEvent {
+  final int levelIndex;
+  final int stageIndex;
+  final int taskIndex;
+
+  CompleteTasksUpToRequested({
+    required this.levelIndex,
+    required this.stageIndex,
+    required this.taskIndex,
+  });
 }

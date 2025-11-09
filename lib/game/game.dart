@@ -38,10 +38,26 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
   bool isTaskActive = false;
   Map<int, int> userAnswers = {};
   List<Question> failedQuestionsQuiz = [];
+  Quiz? _cachedQuiz; // Cache the current quiz to avoid regenerating
 
   bool isUiOverlayActive = false;
 
-  WhatIsMyWorkGame({required this.levels});
+  WhatIsMyWorkGame({required this.levels}) {
+    // Find the current position from levels (first incomplete task)
+    outerLoop:
+    for (int l = 0; l < levels.length; l++) {
+      for (int s = 0; s < levels[l].stages.length; s++) {
+        for (int t = 0; t < levels[l].stages[s].tasks.length; t++) {
+          if (!levels[l].stages[s].tasks[t].isCompleted) {
+            currentLevel = l;
+            currentStage = s;
+            currentTask = t;
+            break outerLoop;
+          }
+        }
+      }
+    }
+  }
 
   int get totalSpentTime {
     int total = 0;
@@ -86,35 +102,67 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     return levels[currentLevel].stages[currentStage].tasks[currentTask];
   }
 
-  Quiz? getCurrentQuiz() {
-    if (failedQuestionsQuiz.isNotEmpty) {
-      return Quiz(
-        levelType: levels[currentLevel].type,
-        stageNumber: levels[currentLevel].stages[currentStage].stageNumber,
-        questions: failedQuestionsQuiz,
-      );
-    }
+  void refreshTaskComponent() {
+    children.whereType<TaskComponent>().forEach(remove);
+    add(_buildTaskComponent());
+  }
 
+  Quiz? getCurrentQuiz() {
+    // Eğer cache'de quiz varsa onu dön
+    if (_cachedQuiz != null) {
+      return _cachedQuiz;
+    }
+    
     final stage = levels[currentLevel].stages[currentStage];
     final random = Random();
     List<Question> quizQuestions = [];
 
-    for (var task in stage.tasks) {
-      if (task.questions.isNotEmpty) {
-        final randomIndex = random.nextInt(task.questions.length);
-        quizQuestions.add(task.questions[randomIndex]);
+    if (failedQuestionsQuiz.isNotEmpty) {
+      // Başarısız soruların görevlerinden farklı sorular seç
+      for (var failedQuestion in failedQuestionsQuiz) {
+        // Bu sorunun hangi göreve ait olduğunu bul
+        for (var task in stage.tasks) {
+          if (task.name == failedQuestion.relatedTaskName && task.questions.isNotEmpty) {
+            // Aynı göreve ait ama farklı bir soru seç
+            var availableQuestions = task.questions
+                .where((q) => q.text != failedQuestion.text)
+                .toList();
+            
+            if (availableQuestions.isEmpty) {
+              // Başka soru yoksa aynı soruyu tekrar sor
+              availableQuestions = task.questions;
+            }
+            
+            final randomIndex = random.nextInt(availableQuestions.length);
+            quizQuestions.add(availableQuestions[randomIndex]);
+            break;
+          }
+        }
+      }
+    } else {
+      // Normal quiz - her tasktan rastgele bir soru
+      for (var task in stage.tasks) {
+        if (task.questions.isNotEmpty) {
+          final randomIndex = random.nextInt(task.questions.length);
+          quizQuestions.add(task.questions[randomIndex]);
+        }
       }
     }
 
     if (quizQuestions.isNotEmpty) {
-      return Quiz(
+      _cachedQuiz = Quiz(
         levelType: levels[currentLevel].type,
         stageNumber: stage.stageNumber,
         questions: quizQuestions,
       );
+      return _cachedQuiz;
     }
 
     return null;
+  }
+
+  void clearQuizCache() {
+    _cachedQuiz = null;
   }
 
   void jumpToTask(String taskName) {
@@ -155,6 +203,28 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     }
   }
 
+  // Yanlış cevaplanan soruların görevlerini incomplete yap
+  void markFailedQuestionTasksAsIncomplete(List<Question> failedQuestions) {
+    final currentStageObj = levels[currentLevel].stages[currentStage];
+    
+    for (var question in failedQuestions) {
+      // Her sorunun hangi göreve ait olduğunu relatedTaskName ile bul
+      for (int t = 0; t < currentStageObj.tasks.length; t++) {
+        final task = currentStageObj.tasks[t];
+        if (task.name == question.relatedTaskName) {
+          // Bu görevi incomplete yap
+          task.isCompleted = false;
+          task.startTime = null;
+          task.endTime = null;
+          break;
+        }
+      }
+    }
+    
+    // İlk incomplete task'a git
+    findAndSetNextIncompleteTask();
+  }
+
   void startTask() {
     if (isTaskActive) return;
     isTaskActive = true;
@@ -165,8 +235,8 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
       period: task.durationSeconds.toDouble(),
       removeOnFinish: true,
       onTick: () {
-        // The timer component will automatically handle completion,
-        // but we can add a manual complete call if needed.
+        // Timer completed - automatically complete the task
+        completeTask();
       },
     );
     add(timerComponent!);
@@ -192,6 +262,8 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
   }
 
   void advanceToNextStage() {
+    clearQuizCache(); // Yeni stage'e geçerken cache'i temizle
+    
     if (currentStage < levels[currentLevel].stages.length - 1) {
       currentStage++;
       currentTask = 0;
