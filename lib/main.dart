@@ -2,7 +2,8 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:what_is_my_work/game/bloc/game_bloc.dart';
-import 'package:what_is_my_work/game/game.dart' hide TaskTimerWidget, GameStatusOverlay, TaskDetailsOverlay;
+import 'package:what_is_my_work/game/game.dart'
+    hide TaskTimerWidget, GameStatusOverlay, TaskDetailsOverlay;
 import 'package:what_is_my_work/game/overlays/quiz_overlay.dart';
 import 'package:what_is_my_work/game/overlays/quiz_result_overlay.dart';
 import 'package:what_is_my_work/game/overlays/task_details_overlay.dart';
@@ -14,9 +15,7 @@ void main() {
   runApp(
     BlocProvider(
       create: (context) => GameBloc(),
-      child: const MaterialApp(
-        home: AppNavigator(),
-      ),
+      child: const MaterialApp(home: AppNavigator()),
     ),
   );
 }
@@ -52,7 +51,7 @@ class _GameHostState extends State<GameHost> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Show user info after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_userInfoShown && mounted) {
@@ -97,7 +96,7 @@ class _GameHostState extends State<GameHost> with WidgetsBindingObserver {
         ],
       ),
     );
-    
+
     // Auto-hide after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (context.mounted) {
@@ -121,18 +120,21 @@ class _GameHostState extends State<GameHost> with WidgetsBindingObserver {
                     GameStatusOverlay(game: game as WhatIsMyWorkGame),
                 'TaskDetails': (context, game) =>
                     TaskDetailsOverlay(game as WhatIsMyWorkGame),
-                'Quiz': (context, game) =>
-                    QuizOverlay(game: game as WhatIsMyWorkGame, quiz: game.getCurrentQuiz()!),
-                'QuizResult': (context, game) =>
-                    QuizResultOverlay(game: game as WhatIsMyWorkGame, quiz: game.getCurrentQuiz()!, userAnswers: game.userAnswers),
+                'Quiz': (context, game) => QuizOverlay(
+                  game: game as WhatIsMyWorkGame,
+                  quiz: game.getCurrentQuiz()!,
+                ),
+                'QuizResult': (context, game) => QuizResultOverlay(
+                  game: game as WhatIsMyWorkGame,
+                  quiz: game.getCurrentQuiz()!,
+                  userAnswers: game.userAnswers,
+                ),
               },
               initialActiveOverlays: const ['GameStatus'],
             ),
           );
         } else {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
       },
     );

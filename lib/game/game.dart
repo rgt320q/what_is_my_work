@@ -112,7 +112,7 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     if (_cachedQuiz != null) {
       return _cachedQuiz;
     }
-    
+
     final stage = levels[currentLevel].stages[currentStage];
     final random = Random();
     List<Question> quizQuestions = [];
@@ -122,17 +122,18 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
       for (var failedQuestion in failedQuestionsQuiz) {
         // Bu sorunun hangi göreve ait olduğunu bul
         for (var task in stage.tasks) {
-          if (task.name == failedQuestion.relatedTaskName && task.questions.isNotEmpty) {
+          if (task.name == failedQuestion.relatedTaskName &&
+              task.questions.isNotEmpty) {
             // Aynı göreve ait ama farklı bir soru seç
             var availableQuestions = task.questions
                 .where((q) => q.text != failedQuestion.text)
                 .toList();
-            
+
             if (availableQuestions.isEmpty) {
               // Başka soru yoksa aynı soruyu tekrar sor
               availableQuestions = task.questions;
             }
-            
+
             final randomIndex = random.nextInt(availableQuestions.length);
             quizQuestions.add(availableQuestions[randomIndex]);
             break;
@@ -206,7 +207,7 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
   // Yanlış cevaplanan soruların görevlerini incomplete yap
   void markFailedQuestionTasksAsIncomplete(List<Question> failedQuestions) {
     final currentStageObj = levels[currentLevel].stages[currentStage];
-    
+
     for (var question in failedQuestions) {
       // Her sorunun hangi göreve ait olduğunu relatedTaskName ile bul
       for (int t = 0; t < currentStageObj.tasks.length; t++) {
@@ -220,7 +221,7 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
         }
       }
     }
-    
+
     // İlk incomplete task'a git
     findAndSetNextIncompleteTask();
   }
@@ -251,19 +252,19 @@ class WhatIsMyWorkGame extends FlameGame with HasGameReference {
     task.isCompleted = true;
     task.endTime = DateTime.now();
     overlays.remove('TaskTimer');
-    
+
     // Save progress immediately after completing a task
     final context = buildContext;
     if (context != null && context.mounted) {
       context.read<GameBloc>().add(GameStateSaved());
     }
-    
+
     advanceTask();
   }
 
   void advanceToNextStage() {
     clearQuizCache(); // Yeni stage'e geçerken cache'i temizle
-    
+
     if (currentStage < levels[currentLevel].stages.length - 1) {
       currentStage++;
       currentTask = 0;
@@ -413,7 +414,7 @@ class GameStatusOverlay extends StatelessWidget {
           final currentStage = game.currentStage;
           final currentTask = game.currentTask;
           final currentStageObj = currentLevel.stages[currentStage];
-          
+
           return SafeArea(
             child: Container(
               decoration: BoxDecoration(
@@ -432,7 +433,7 @@ class GameStatusOverlay extends StatelessWidget {
                 children: [
                   _buildPlayerInfoHeader(context, state),
                   const SizedBox(height: 16),
-                  
+
                   // Current level indicator
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -441,10 +442,7 @@ class GameStatusOverlay extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [
-                          Colors.blue.shade700,
-                          Colors.purple.shade700,
-                        ],
+                        colors: [Colors.blue.shade700, Colors.purple.shade700],
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
@@ -457,11 +455,7 @@ class GameStatusOverlay extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.star,
-                          color: Colors.yellow,
-                          size: 24,
-                        ),
+                        const Icon(Icons.star, color: Colors.yellow, size: 24),
                         const SizedBox(width: 12),
                         Text(
                           '${currentLevel.type.name.toUpperCase()} - Kademe ${currentStageObj.stageNumber}',
@@ -475,21 +469,33 @@ class GameStatusOverlay extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   Expanded(
                     child: ListView(
                       children: [
                         for (int l = 0; l < game.levels.length; l++) ...[
-                          _buildLevelCard(game, l, currentLevel, currentStage, currentTask, context),
+                          _buildLevelCard(
+                            game,
+                            l,
+                            currentLevel,
+                            currentStage,
+                            currentTask,
+                            context,
+                          ),
                           const SizedBox(height: 8),
                         ],
                       ],
                     ),
                   ),
-                  
+
                   // Bottom padding and current task start button
                   const SizedBox(height: 16),
-                  _buildCurrentTaskButton(context, currentLevel, currentStage, currentTask),
+                  _buildCurrentTaskButton(
+                    context,
+                    currentLevel,
+                    currentStage,
+                    currentTask,
+                  ),
                 ],
               ),
             ),
@@ -510,15 +516,11 @@ class GameStatusOverlay extends StatelessWidget {
   ) {
     final level = game.levels[levelIndex];
     final isCurrentLevel = levelIndex == game.currentLevel;
-    
+
     return Card(
       elevation: isCurrentLevel ? 8 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      color: isCurrentLevel
-          ? const Color(0xFF2D2D44)
-          : const Color(0xFF1E1E2E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: isCurrentLevel ? const Color(0xFF2D2D44) : const Color(0xFF1E1E2E),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -588,8 +590,9 @@ class GameStatusOverlay extends StatelessWidget {
     BuildContext context,
   ) {
     final stage = game.levels[levelIndex].stages[stageIndex];
-    final isCurrentStage = levelIndex == game.currentLevel && stageIndex == currentStage;
-    
+    final isCurrentStage =
+        levelIndex == game.currentLevel && stageIndex == currentStage;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -644,7 +647,7 @@ class GameStatusOverlay extends StatelessWidget {
   ) {
     final task = game.levels[levelIndex].stages[stageIndex].tasks[taskIndex];
     final isCompleted = task.isCompleted;
-    
+
     // Check if this task is available (previous tasks completed)
     bool isAvailable = isCompleted;
     if (!isCompleted) {
@@ -656,7 +659,11 @@ class GameStatusOverlay extends StatelessWidget {
         } else if (stageIndex == game.currentStage) {
           bool allPreviousCompleted = true;
           for (int i = 0; i < taskIndex; i++) {
-            if (!game.levels[levelIndex].stages[stageIndex].tasks[i].isCompleted) {
+            if (!game
+                .levels[levelIndex]
+                .stages[stageIndex]
+                .tasks[i]
+                .isCompleted) {
               allPreviousCompleted = false;
               break;
             }
@@ -669,9 +676,9 @@ class GameStatusOverlay extends StatelessWidget {
         isAvailable = false;
       }
     }
-    
+
     final isNextTask = isAvailable && !isCompleted;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -686,17 +693,17 @@ class GameStatusOverlay extends StatelessWidget {
         color: isCompleted
             ? Colors.green.withValues(alpha: 0.1)
             : isAvailable
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.grey.withValues(alpha: 0.03),
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isNextTask
               ? Colors.orange.withValues(alpha: 0.5)
               : isCompleted
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : isAvailable
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.grey.withValues(alpha: 0.2),
+              ? Colors.green.withValues(alpha: 0.3)
+              : isAvailable
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.grey.withValues(alpha: 0.2),
           width: isNextTask ? 2 : 1,
         ),
       ),
@@ -714,17 +721,18 @@ class GameStatusOverlay extends StatelessWidget {
                     colors: isCompleted
                         ? [Colors.green.shade600, Colors.teal.shade600]
                         : isNextTask
-                            ? [Colors.orange.shade600, Colors.deepOrange.shade600]
-                            : [Colors.grey.shade700, Colors.grey.shade600],
+                        ? [Colors.orange.shade600, Colors.deepOrange.shade600]
+                        : [Colors.grey.shade700, Colors.grey.shade600],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (isCompleted
-                              ? Colors.green
-                              : isNextTask
+                      color:
+                          (isCompleted
+                                  ? Colors.green
+                                  : isNextTask
                                   ? Colors.orange
                                   : Colors.grey)
-                          .withValues(alpha: 0.4),
+                              .withValues(alpha: 0.4),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -734,10 +742,10 @@ class GameStatusOverlay extends StatelessWidget {
                   isCompleted
                       ? Icons.check_circle
                       : isNextTask
-                          ? Icons.play_circle_filled
-                          : isAvailable
-                              ? Icons.radio_button_unchecked
-                              : Icons.lock,
+                      ? Icons.play_circle_filled
+                      : isAvailable
+                      ? Icons.radio_button_unchecked
+                      : Icons.lock,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -751,14 +759,16 @@ class GameStatusOverlay extends StatelessWidget {
                       task.name,
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: isNextTask ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isNextTask
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isCompleted
                             ? Colors.greenAccent
                             : isNextTask
-                                ? Colors.orangeAccent
-                                : isAvailable
-                                    ? Colors.white
-                                    : Colors.grey,
+                            ? Colors.orangeAccent
+                            : isAvailable
+                            ? Colors.white
+                            : Colors.grey,
                       ),
                     ),
                     if (!isCompleted) ...[
@@ -768,13 +778,17 @@ class GameStatusOverlay extends StatelessWidget {
                           Icon(
                             Icons.timer_outlined,
                             size: 14,
-                            color: isAvailable ? Colors.yellow.shade700 : Colors.grey,
+                            color: isAvailable
+                                ? Colors.yellow.shade700
+                                : Colors.grey,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${task.durationSeconds}s',
                             style: TextStyle(
-                              color: isAvailable ? Colors.yellow.shade700 : Colors.grey,
+                              color: isAvailable
+                                  ? Colors.yellow.shade700
+                                  : Colors.grey,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -830,7 +844,8 @@ class GameStatusOverlay extends StatelessWidget {
                             size: 18,
                           ),
                         ),
-                        onPressed: () => _launchUrl(task.explanationUrl, context),
+                        onPressed: () =>
+                            _launchUrl(task.explanationUrl, context),
                       ),
                   ],
                 ),
@@ -877,12 +892,12 @@ class GameStatusOverlay extends StatelessWidget {
     int currentTaskIndex,
   ) {
     final task = currentLevel.stages[currentStageIndex].tasks[currentTaskIndex];
-    
+
     // Debug: Always show button for now
     // if (task.isCompleted || game.isTaskActive) {
     //   return const SizedBox.shrink();
     // }
-    
+
     // Show button only if task is not completed and not active
     final shouldShow = !task.isCompleted && !game.isTaskActive;
     if (!shouldShow) {
@@ -894,10 +909,7 @@ class GameStatusOverlay extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.green.shade600,
-            Colors.teal.shade600,
-          ],
+          colors: [Colors.green.shade600, Colors.teal.shade600],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -1107,7 +1119,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
     final remainingSeconds = _remaining ?? 0;
     final isTimeUp = remainingSeconds <= 0;
     final isLowTime = remainingSeconds <= 10 && remainingSeconds > 0;
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1130,8 +1142,8 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
               colors: isTimeUp
                   ? [Colors.green.shade800, Colors.green.shade600]
                   : isLowTime
-                      ? [Colors.red.shade800, Colors.orange.shade800]
-                      : [const Color(0xFF1E1E2E), const Color(0xFF2D2D44)],
+                  ? [Colors.red.shade800, Colors.orange.shade800]
+                  : [const Color(0xFF1E1E2E), const Color(0xFF2D2D44)],
             ),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
@@ -1139,8 +1151,8 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                 color: isTimeUp
                     ? Colors.green.withValues(alpha: 0.6)
                     : isLowTime
-                        ? Colors.red.withValues(alpha: 0.6)
-                        : Colors.blue.withValues(alpha: 0.4),
+                    ? Colors.red.withValues(alpha: 0.6)
+                    : Colors.blue.withValues(alpha: 0.4),
                 blurRadius: 30,
                 spreadRadius: 5,
               ),
@@ -1180,7 +1192,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Timer display
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 400),
@@ -1199,7 +1211,10 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                           gradient: LinearGradient(
                             colors: isLowTime
                                 ? [Colors.red.shade600, Colors.orange.shade600]
-                                : [Colors.blue.shade600, Colors.purple.shade600],
+                                : [
+                                    Colors.blue.shade600,
+                                    Colors.purple.shade600,
+                                  ],
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -1244,7 +1259,10 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
-                            colors: [Colors.green.shade500, Colors.teal.shade500],
+                            colors: [
+                              Colors.green.shade500,
+                              Colors.teal.shade500,
+                            ],
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -1275,7 +1293,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                         ),
                       ),
               ),
-              
+
               if (isTimeUp) ...[
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
@@ -1300,9 +1318,9 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                   ),
                 ),
               ],
-              
+
               const SizedBox(height: 32),
-              
+
               // Action buttons
               Wrap(
                 spacing: 12,
@@ -1346,7 +1364,7 @@ class _TaskTimerWidgetState extends State<TaskTimerWidget> {
                     ),
                 ],
               ),
-              
+
               if (!isTimeUp) ...[
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
@@ -1413,10 +1431,7 @@ class TaskDetailsOverlay extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF1E1E2E),
-                    const Color(0xFF2D2D44),
-                  ],
+                  colors: [const Color(0xFF1E1E2E), const Color(0xFF2D2D44)],
                 ),
               ),
               child: Padding(
@@ -1430,7 +1445,10 @@ class TaskDetailsOverlay extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
-                          colors: [Colors.blue.shade400, Colors.purple.shade400],
+                          colors: [
+                            Colors.blue.shade400,
+                            Colors.purple.shade400,
+                          ],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -1447,7 +1465,7 @@ class TaskDetailsOverlay extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Task title
                     Text(
                       currentTask.name,
@@ -1460,7 +1478,7 @@ class TaskDetailsOverlay extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Task description
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1482,7 +1500,7 @@ class TaskDetailsOverlay extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Duration info
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -1540,7 +1558,7 @@ class TaskDetailsOverlay extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     // Action buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1555,7 +1573,10 @@ class TaskDetailsOverlay extends StatelessWidget {
                           label: const Text('Geri'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white54, width: 2),
+                            side: const BorderSide(
+                              color: Colors.white54,
+                              width: 2,
+                            ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
                               vertical: 16,
@@ -1566,7 +1587,7 @@ class TaskDetailsOverlay extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        
+
                         // Start button
                         ElevatedButton.icon(
                           onPressed: () {

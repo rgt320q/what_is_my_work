@@ -21,11 +21,11 @@ class TaskTimerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final task = game.getCurrentTask();
-    
+
     return BlocBuilder<GameBloc, GameState>(
       builder: (context, state) {
         final user = state is GameLoaded ? state.user : null;
-        
+
         return Positioned(
           top: 16,
           left: 16,
@@ -41,11 +41,7 @@ class TaskTimerWidget extends StatelessWidget {
                   if (user != null) ...[
                     Row(
                       children: [
-                        const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 16,
-                        ),
+                        const Icon(Icons.person, color: Colors.white, size: 16),
                         const SizedBox(width: 8),
                         Text(
                           user.username,
@@ -93,7 +89,8 @@ class TaskTimerWidget extends StatelessWidget {
                       (count) => task.durationSeconds - count - 1,
                     ).take(task.durationSeconds),
                     builder: (context, snapshot) {
-                      final remainingTime = snapshot.data ?? task.durationSeconds;
+                      final remainingTime =
+                          snapshot.data ?? task.durationSeconds;
                       return Text(
                         'Time: ${_formatTime(remainingTime)}',
                         style: TextStyle(

@@ -89,7 +89,7 @@ class QuizResultOverlay extends StatelessWidget {
                     onPressed: () {
                       game.overlays.remove('QuizResult');
                       game.clearQuizCache(); // Cache'i temizle
-                      
+
                       if (isPassed) {
                         // Quiz başarılı (tüm sorular doğru) - bir sonraki kademeye geç
                         game.failedQuestionsQuiz.clear();
@@ -98,18 +98,21 @@ class QuizResultOverlay extends StatelessWidget {
                         // Quiz başarısız - yanlış cevaplanan soruları bul ve o görevleri tekrar yap
                         List<Question> failedQuestions = [];
                         for (int i = 0; i < quiz.questions.length; i++) {
-                          if (userAnswers[i] != quiz.questions[i].correctOptionIndex) {
+                          if (userAnswers[i] !=
+                              quiz.questions[i].correctOptionIndex) {
                             failedQuestions.add(quiz.questions[i]);
                           }
                         }
-                        
+
                         // Yanlış soruların görevlerini incomplete yap
-                        game.markFailedQuestionTasksAsIncomplete(failedQuestions);
-                        
+                        game.markFailedQuestionTasksAsIncomplete(
+                          failedQuestions,
+                        );
+
                         // Başarısız soruları kaydet (tekrar quiz'de sorulacak)
                         game.failedQuestionsQuiz.clear();
                         game.failedQuestionsQuiz.addAll(failedQuestions);
-                        
+
                         // GameStatus'a dön
                         game.overlays.add('GameStatus');
                       }
@@ -120,8 +123,9 @@ class QuizResultOverlay extends StatelessWidget {
                       style: const TextStyle(fontSize: 18),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          isPassed ? Colors.green.shade600 : Colors.orange.shade600,
+                      backgroundColor: isPassed
+                          ? Colors.green.shade600
+                          : Colors.orange.shade600,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.all(20),
                     ),

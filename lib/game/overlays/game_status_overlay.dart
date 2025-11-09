@@ -15,9 +15,9 @@ Future<void> _launchUrl(String? urlString, BuildContext context) async {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch $urlString')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not launch $urlString')));
     }
   }
 }
@@ -39,7 +39,7 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
   void initState() {
     super.initState();
     _updateExpandedState();
-    
+
     // Scroll to current level after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToCurrentLevel();
@@ -62,7 +62,9 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
   void _updateExpandedState() {
     // Only expand current level and current stage
     _expandedLevels = {widget.game.currentLevel};
-    _expandedStages = {'${widget.game.currentLevel}-${widget.game.currentStage}'};
+    _expandedStages = {
+      '${widget.game.currentLevel}-${widget.game.currentStage}',
+    };
   }
 
   @override
@@ -76,7 +78,7 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
       // Calculate offset based on collapsed/expanded heights
       const collapsedCardHeight = 80.0; // Kapalı card yüksekliği
       final targetOffset = widget.game.currentLevel * collapsedCardHeight;
-      
+
       _scrollController.animateTo(
         targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 500),
@@ -88,14 +90,14 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
   @override
   Widget build(BuildContext context) {
     final game = widget.game; // Local reference for easier access
-    
+
     return BlocListener<GameBloc, GameState>(
       listener: (context, state) {
         if (state is GameLoaded) {
           // Find the current position from the profile
           int newLevel = 0;
           int newStage = 0;
-          
+
           outerLoop:
           for (int l = 0; l < state.profile.levels.length; l++) {
             for (int s = 0; s < state.profile.levels[l].stages.length; s++) {
@@ -108,7 +110,7 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
               }
             }
           }
-          
+
           // Update game position if changed
           if (game.currentLevel != newLevel || game.currentStage != newStage) {
             game.currentLevel = newLevel;
@@ -130,97 +132,113 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
             final currentStage = game.currentStage;
             final currentTask = game.currentTask;
             final currentStageObj = currentLevel.stages[currentStage];
-          
-          return SafeArea(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.95),
-                    Colors.grey.shade900.withOpacity(0.95),
+
+            return SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.95),
+                      Colors.grey.shade900.withOpacity(0.95),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPlayerInfoHeader(context, state),
+                    const SizedBox(height: 8),
+                    _buildDebugPanel(context, state),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.shade700,
+                            Colors.purple.shade700,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.3),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.yellow,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${currentLevel.type.name.toUpperCase()} - Kademe ${currentStageObj.stageNumber}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: game.levels.length,
+                        itemBuilder: (context, l) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: _buildLevelCard(
+                              game,
+                              l,
+                              currentLevel,
+                              currentStage,
+                              currentTask,
+                              context,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+                    _buildCurrentTaskButton(
+                      context,
+                      currentLevel,
+                      currentStage,
+                      currentTask,
+                    ),
                   ],
                 ),
               ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildPlayerInfoHeader(context, state),
-                  const SizedBox(height: 8),
-                  _buildDebugPanel(context, state),
-                  const SizedBox(height: 16),
-                  
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue.shade700, Colors.purple.shade700],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.yellow, size: 24),
-                        const SizedBox(width: 12),
-                        Text(
-                          '${currentLevel.type.name.toUpperCase()} - Kademe ${currentStageObj.stageNumber}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      itemCount: game.levels.length,
-                      itemBuilder: (context, l) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: _buildLevelCard(
-                            game, 
-                            l, 
-                            currentLevel, 
-                            currentStage, 
-                            currentTask, 
-                            context,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  _buildCurrentTaskButton(context, currentLevel, currentStage, currentTask),
-                ],
-              ),
-            ),
-          );
-        }
-        return const SizedBox.shrink();
-      },
+            );
+          }
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
 
   Widget _buildPlayerInfoHeader(BuildContext context, GameLoaded state) {
     final loginTime = state.user.loginTime;
-    final formattedLoginTime = '${loginTime.day.toString().padLeft(2, '0')}/${loginTime.month.toString().padLeft(2, '0')}/${loginTime.year} ${loginTime.hour.toString().padLeft(2, '0')}:${loginTime.minute.toString().padLeft(2, '0')}';
-    
+    final formattedLoginTime =
+        '${loginTime.day.toString().padLeft(2, '0')}/${loginTime.month.toString().padLeft(2, '0')}/${loginTime.year} ${loginTime.hour.toString().padLeft(2, '0')}:${loginTime.minute.toString().padLeft(2, '0')}';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -256,7 +274,10 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                     const SizedBox(width: 8),
                     Text(
                       'Giriş: $formattedLoginTime',
-                      style: const TextStyle(color: Colors.lightBlue, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.lightBlue,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -267,7 +288,10 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                     const SizedBox(width: 8),
                     Text(
                       'Toplam Süre: ${widget.game.totalSpentTime}s',
-                      style: const TextStyle(color: Colors.orange, fontSize: 14),
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -281,7 +305,9 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                 tooltip: 'Kullanıcı Listesi',
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const UsersListScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const UsersListScreen(),
+                    ),
                   );
                 },
               ),
@@ -290,7 +316,9 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                 tooltip: 'Profil Düzenle',
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
                   );
                 },
               ),
@@ -299,7 +327,9 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                 tooltip: 'Görev Ayarları',
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
                   );
                 },
               ),
@@ -318,7 +348,11 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
           SizedBox(width: 8),
           Text(
             'Test Paneli',
-            style: TextStyle(color: Colors.orange, fontSize: 14, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.orange,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -351,17 +385,21 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Complete to Stage 1
               ElevatedButton.icon(
                 onPressed: () {
-                  context.read<GameBloc>().add(CompleteTasksUpToRequested(
-                    levelIndex: 0,
-                    stageIndex: 0,
-                    taskIndex: 2,
-                  ));
+                  context.read<GameBloc>().add(
+                    CompleteTasksUpToRequested(
+                      levelIndex: 0,
+                      stageIndex: 0,
+                      taskIndex: 2,
+                    ),
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('1. Kademe 2 görev tamamlandı')),
+                    const SnackBar(
+                      content: Text('1. Kademe 2 görev tamamlandı'),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.fast_forward, size: 18),
@@ -373,15 +411,17 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Complete to Stage 2
               ElevatedButton.icon(
                 onPressed: () {
-                  context.read<GameBloc>().add(CompleteTasksUpToRequested(
-                    levelIndex: 0,
-                    stageIndex: 1,
-                    taskIndex: 0,
-                  ));
+                  context.read<GameBloc>().add(
+                    CompleteTasksUpToRequested(
+                      levelIndex: 0,
+                      stageIndex: 1,
+                      taskIndex: 0,
+                    ),
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('2. Kademeye geçildi')),
                   );
@@ -395,15 +435,17 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Complete to Level 2
               ElevatedButton.icon(
                 onPressed: () {
-                  context.read<GameBloc>().add(CompleteTasksUpToRequested(
-                    levelIndex: 1,
-                    stageIndex: 0,
-                    taskIndex: 0,
-                  ));
+                  context.read<GameBloc>().add(
+                    CompleteTasksUpToRequested(
+                      levelIndex: 1,
+                      stageIndex: 0,
+                      taskIndex: 0,
+                    ),
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('2. Seviyeye geçildi')),
                   );
@@ -430,18 +472,26 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
     int currentTaskIndex,
   ) {
     final game = widget.game;
-    
+
     // Find the next incomplete task across all levels and stages
     Task? nextIncompleteTask;
     int? nextIncompleteTaskIndex;
     int? nextStageIndex;
     int? nextLevelIndex;
-    
+
     // Start searching from current position
     bool found = false;
     for (int l = game.currentLevel; l < game.levels.length && !found; l++) {
-      for (int s = (l == game.currentLevel ? game.currentStage : 0); s < game.levels[l].stages.length && !found; s++) {
-        for (int t = 0; t < game.levels[l].stages[s].tasks.length && !found; t++) {
+      for (
+        int s = (l == game.currentLevel ? game.currentStage : 0);
+        s < game.levels[l].stages.length && !found;
+        s++
+      ) {
+        for (
+          int t = 0;
+          t < game.levels[l].stages[s].tasks.length && !found;
+          t++
+        ) {
           if (!game.levels[l].stages[s].tasks[t].isCompleted) {
             nextIncompleteTask = game.levels[l].stages[s].tasks[t];
             nextIncompleteTaskIndex = t;
@@ -452,13 +502,15 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
         }
       }
     }
-    
+
     // If no incomplete task found, don't show button
-    if (nextIncompleteTask == null || nextIncompleteTaskIndex == null || 
-        nextStageIndex == null || nextLevelIndex == null) {
+    if (nextIncompleteTask == null ||
+        nextIncompleteTaskIndex == null ||
+        nextStageIndex == null ||
+        nextLevelIndex == null) {
       return const SizedBox.shrink();
     }
-    
+
     // Don't show if a task is currently active
     if (game.isTaskActive) return const SizedBox.shrink();
 
@@ -466,10 +518,16 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.green.shade600, Colors.teal.shade600]),
+        gradient: LinearGradient(
+          colors: [Colors.green.shade600, Colors.teal.shade600],
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.green.withOpacity(0.6), blurRadius: 20, spreadRadius: 3),
+          BoxShadow(
+            color: Colors.green.withOpacity(0.6),
+            blurRadius: 20,
+            spreadRadius: 3,
+          ),
         ],
       ),
       child: Material(
@@ -498,7 +556,11 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                     color: Colors.white.withOpacity(0.3),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 28),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -546,7 +608,7 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
   ) {
     final level = game.levels[levelIndex];
     final isCurrentLevel = levelIndex == game.currentLevel;
-    
+
     return Card(
       elevation: isCurrentLevel ? 8 : 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -555,12 +617,16 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isCurrentLevel ? Colors.blue.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+            color: isCurrentLevel
+                ? Colors.blue.withOpacity(0.5)
+                : Colors.white.withOpacity(0.1),
             width: isCurrentLevel ? 2 : 1,
           ),
         ),
         child: ExpansionTile(
-          key: ValueKey('level-$levelIndex-${_expandedLevels.contains(levelIndex)}'), // Force rebuild when state changes
+          key: ValueKey(
+            'level-$levelIndex-${_expandedLevels.contains(levelIndex)}',
+          ), // Force rebuild when state changes
           initiallyExpanded: _expandedLevels.contains(levelIndex),
           onExpansionChanged: (expanded) {
             setState(() {
@@ -582,7 +648,11 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
               ),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(_getLevelIcon(level.type), color: Colors.white, size: 24),
+            child: Icon(
+              _getLevelIcon(level.type),
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           title: Text(
             level.type.name.toUpperCase(),
@@ -594,11 +664,21 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
           ),
           subtitle: Text(
             '${_getCompletedTasksInLevel(level)}/${_getTotalTasksInLevel(level)} görev tamamlandı',
-            style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 12,
+            ),
           ),
           children: [
             for (int s = 0; s < level.stages.length; s++)
-              _buildStageCard(game, levelIndex, s, currentStage, currentTask, context),
+              _buildStageCard(
+                game,
+                levelIndex,
+                s,
+                currentStage,
+                currentTask,
+                context,
+              ),
           ],
         ),
       ),
@@ -614,20 +694,27 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
     BuildContext context,
   ) {
     final stage = game.levels[levelIndex].stages[stageIndex];
-    final isCurrentStage = levelIndex == game.currentLevel && stageIndex == currentStage;
+    final isCurrentStage =
+        levelIndex == game.currentLevel && stageIndex == currentStage;
     final stageKey = '$levelIndex-$stageIndex';
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isCurrentStage ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+        color: isCurrentStage
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCurrentStage ? Colors.blue.withOpacity(0.3) : Colors.transparent,
+          color: isCurrentStage
+              ? Colors.blue.withOpacity(0.3)
+              : Colors.transparent,
         ),
       ),
       child: ExpansionTile(
-        key: ValueKey('stage-$stageKey-${_expandedStages.contains(stageKey)}'), // Force rebuild when state changes
+        key: ValueKey(
+          'stage-$stageKey-${_expandedStages.contains(stageKey)}',
+        ), // Force rebuild when state changes
         initiallyExpanded: _expandedStages.contains(stageKey),
         onExpansionChanged: (expanded) {
           setState(() {
@@ -654,7 +741,14 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
         ),
         children: [
           for (int t = 0; t < stage.tasks.length; t++)
-            _buildTaskCard(game, levelIndex, stageIndex, t, currentTask, context),
+            _buildTaskCard(
+              game,
+              levelIndex,
+              stageIndex,
+              t,
+              currentTask,
+              context,
+            ),
         ],
       ),
     );
@@ -670,7 +764,7 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
   ) {
     final task = game.levels[levelIndex].stages[stageIndex].tasks[taskIndex];
     final isCompleted = task.isCompleted;
-    
+
     bool isAvailable = isCompleted;
     if (!isCompleted) {
       if (levelIndex < game.currentLevel) {
@@ -681,7 +775,11 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
         } else if (stageIndex == game.currentStage) {
           bool allPreviousCompleted = true;
           for (int i = 0; i < taskIndex; i++) {
-            if (!game.levels[levelIndex].stages[stageIndex].tasks[i].isCompleted) {
+            if (!game
+                .levels[levelIndex]
+                .stages[stageIndex]
+                .tasks[i]
+                .isCompleted) {
               allPreviousCompleted = false;
               break;
             }
@@ -694,9 +792,9 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
         isAvailable = false;
       }
     }
-    
+
     final isNextTask = isAvailable && !isCompleted;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -711,17 +809,17 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
         color: isCompleted
             ? Colors.green.withOpacity(0.1)
             : isAvailable
-                ? Colors.white.withOpacity(0.05)
-                : Colors.grey.withOpacity(0.03),
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.withOpacity(0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isNextTask
               ? Colors.orange.withOpacity(0.5)
               : isCompleted
-                  ? Colors.green.withOpacity(0.3)
-                  : isAvailable
-                      ? Colors.white.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.2),
+              ? Colors.green.withOpacity(0.3)
+              : isAvailable
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.2),
           width: isNextTask ? 2 : 1,
         ),
       ),
@@ -739,13 +837,18 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                     colors: isCompleted
                         ? [Colors.green.shade600, Colors.teal.shade600]
                         : isNextTask
-                            ? [Colors.orange.shade600, Colors.deepOrange.shade600]
-                            : [Colors.grey.shade700, Colors.grey.shade600],
+                        ? [Colors.orange.shade600, Colors.deepOrange.shade600]
+                        : [Colors.grey.shade700, Colors.grey.shade600],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (isCompleted ? Colors.green : isNextTask ? Colors.orange : Colors.grey)
-                          .withOpacity(0.4),
+                      color:
+                          (isCompleted
+                                  ? Colors.green
+                                  : isNextTask
+                                  ? Colors.orange
+                                  : Colors.grey)
+                              .withOpacity(0.4),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -755,10 +858,10 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                   isCompleted
                       ? Icons.check_circle
                       : isNextTask
-                          ? Icons.play_circle_filled
-                          : isAvailable
-                              ? Icons.radio_button_unchecked
-                              : Icons.lock,
+                      ? Icons.play_circle_filled
+                      : isAvailable
+                      ? Icons.radio_button_unchecked
+                      : Icons.lock,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -772,14 +875,16 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                       task.name,
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: isNextTask ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isNextTask
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isCompleted
                             ? Colors.greenAccent
                             : isNextTask
-                                ? Colors.orangeAccent
-                                : isAvailable
-                                    ? Colors.white
-                                    : Colors.grey,
+                            ? Colors.orangeAccent
+                            : isAvailable
+                            ? Colors.white
+                            : Colors.grey,
                       ),
                     ),
                     if (!isCompleted) ...[
@@ -789,13 +894,17 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                           Icon(
                             Icons.timer_outlined,
                             size: 14,
-                            color: isAvailable ? Colors.yellow.shade700 : Colors.grey,
+                            color: isAvailable
+                                ? Colors.yellow.shade700
+                                : Colors.grey,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${task.durationSeconds}s',
                             style: TextStyle(
-                              color: isAvailable ? Colors.yellow.shade700 : Colors.grey,
+                              color: isAvailable
+                                  ? Colors.yellow.shade700
+                                  : Colors.grey,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -829,7 +938,11 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                             color: Colors.blue.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.link, color: Colors.blue, size: 18),
+                          child: const Icon(
+                            Icons.link,
+                            color: Colors.blue,
+                            size: 18,
+                          ),
                         ),
                         onPressed: () => _launchUrl(task.taskUrl, context),
                       ),
@@ -841,9 +954,14 @@ class _GameStatusOverlayState extends State<GameStatusOverlay> {
                             color: Colors.amber.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.help_outline, color: Colors.amber, size: 18),
+                          child: const Icon(
+                            Icons.help_outline,
+                            color: Colors.amber,
+                            size: 18,
+                          ),
                         ),
-                        onPressed: () => _launchUrl(task.explanationUrl, context),
+                        onPressed: () =>
+                            _launchUrl(task.explanationUrl, context),
                       ),
                   ],
                 ),
